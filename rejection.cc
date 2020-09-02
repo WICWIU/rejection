@@ -99,7 +99,7 @@ void test_noveltyDetection();
 
 int main()
 {
-    test_readCSV();
+    //test_readCSV();
     test_noveltyDetection();
 
     return 0;
