@@ -46,7 +46,7 @@ feature_space_t readCSV(std::string filename)
     return result;
 }
 
-double vector_distance(std::vector<double> v, std::vector<double> u)
+double vectorDistance(std::vector<double> v, std::vector<double> u)
 {
     assert(v.size() == u.size());
     double accm = 0.;
@@ -66,7 +66,7 @@ std::pair<int, double> minAverage(feature_space_t fspace,
         double average = 0.;
         for (const auto &u : fspace[l])
         {
-            average += vector_distance(u, v);
+            average += vectorDistance(u, v);
         }
         average /= v.size();
         if (min_average > average)
