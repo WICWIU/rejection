@@ -8,7 +8,7 @@
 
 typedef std::map<int, std::vector<std::vector<double>>> csv_t;
 
-csv_t read_csv(std::string filename)
+csv_t readCSV(std::string filename)
 {
     std::ifstream csv_file(filename);
     if (!csv_file.is_open())
@@ -41,9 +41,20 @@ csv_t read_csv(std::string filename)
     return result;
 }
 
+// TEST FUNCTIONS
+void test_readCSV();
+// END of TEST FUNCTIONS
+
 int main()
 {
-    csv_t ref = read_csv("baseline_500_ref.csv");
+    test_readCSV();
+
+    return 0;
+}
+
+void test_readCSV()
+{
+    csv_t ref = readCSV("baseline_500_ref.csv");
     // vector of label 1
     std::cout << ref[1].size() << std::endl;
     // first element of vector of label 1
@@ -54,6 +65,4 @@ int main()
     std::cout << ref[1][0][1] << std::endl;
     // third element of first element of vector of label 1
     std::cout << ref[1][0][2] << std::endl;
-
-    return 0;
 }
