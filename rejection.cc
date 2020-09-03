@@ -11,14 +11,14 @@
 #include <stdexcept>
 #include <sstream>
 
-typedef std::map<int, std::vector<std::vector<double>>> feature_space_t;
+typedef std::map<int, std::vector<std::vector<double>>> FEATURE_SPACE;
 
-feature_space_t readCSV(std::string filename)
+FEATURE_SPACE readCSV(std::string filename)
 {
     std::ifstream csv_file(filename);
     if (!csv_file.is_open())
         throw std::runtime_error("Could not open file");
-    feature_space_t result;
+    FEATURE_SPACE result;
     std::string line, colname;
     double val;
     int label;
@@ -55,7 +55,7 @@ double vectorDistance(std::vector<double> v, std::vector<double> u)
     return sqrt(accm);
 }
 
-std::pair<int, double> minAverage(feature_space_t fspace,
+std::pair<int, double> minAverage(FEATURE_SPACE fspace,
                                        std::vector<double> v,
                                        std::vector<int> label)
 {
@@ -78,7 +78,7 @@ std::pair<int, double> minAverage(feature_space_t fspace,
     return std::make_pair(min_label, min_average);
 }
 
-int noveltyDetection(feature_space_t fspace,
+int noveltyDetection(FEATURE_SPACE fspace,
                       std::vector<double> v,
                       std::vector<int> label,
                       double threshold)
@@ -107,7 +107,7 @@ int main()
 
 void test_readCSV()
 {
-    feature_space_t fspace = readCSV("csv/baseline_500_ref.csv");
+    FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
     // vector of label 1
     std::cout << fspace[1].size() << std::endl;
     // first element of vector of label 1
@@ -122,7 +122,7 @@ void test_readCSV()
 
 void test_noveltyDetection()
 {
-    feature_space_t fspace = readCSV("csv/baseline_500_ref.csv");
+    FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
     std::vector<int> label(500);
     for (int i = 1; i <= 500; i++)
         label[i - 1] = i;
