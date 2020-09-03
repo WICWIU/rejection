@@ -56,8 +56,8 @@ double vectorDistance(std::vector<double> v, std::vector<double> u)
 }
 
 std::pair<int, double> minAverage(feature_space_t fspace,
-                                       std::vector<double> v,
-                                       std::vector<int> label)
+                                  std::vector<double> v,
+                                  std::vector<int> label)
 {
     double min_average = std::numeric_limits<double>::infinity();
     int min_label;
@@ -65,9 +65,7 @@ std::pair<int, double> minAverage(feature_space_t fspace,
     {
         double average = 0.;
         for (const auto &u : fspace[l])
-        {
             average += vectorDistance(u, v);
-        }
         average /= v.size();
         if (min_average > average)
         {
@@ -79,13 +77,13 @@ std::pair<int, double> minAverage(feature_space_t fspace,
 }
 
 int noveltyDetection(feature_space_t fspace,
-                      std::vector<double> v,
-                      std::vector<int> label,
-                      double threshold)
+                     std::vector<double> v,
+                     std::vector<int> label,
+                     double threshold)
 {
     std::pair<int, double> min = minAverage(fspace, v, label);
-    double min_average = min.second;
     int min_label = min.first;
+    double min_average = min.second;
     if (min_average < threshold)
         return min_label;
     else
@@ -128,9 +126,9 @@ void test_noveltyDetection()
         label[i - 1] = i;
     double accuray = 0;
     double ct = 0;
-    for(const int& l: label)
+    for (const int &l : label)
     {
-        for(const auto& u: fspace[l])
+        for (const auto &u : fspace[l])
         {
             if (l == noveltyDetection(fspace, u, label, 0.4))
                 accuray++;
