@@ -55,9 +55,9 @@ double vectorDistance(std::vector<double> v, std::vector<double> u)
     return sqrt(accm);
 }
 
-std::pair<int, double> minAverage(FEATURE_SPACE fspace,
-                                       std::vector<double> v,
-                                       std::vector<int> label)
+double minAverage(FEATURE_SPACE fspace,
+                  std::vector<double> v,
+                  std::vector<int> label)
 {
     double min_average = std::numeric_limits<double>::infinity();
     int min_label;
@@ -68,28 +68,25 @@ std::pair<int, double> minAverage(FEATURE_SPACE fspace,
         {
             average += vectorDistance(u, v);
         }
-        average /= v.size();
+        average /= fspace[l].size();
         if (min_average > average)
         {
-            min_label = l;
             min_average = average;
         }
     }
-    return std::make_pair(min_label, min_average);
+    return min_average;
 }
 
 int noveltyDetection(FEATURE_SPACE fspace,
-                      std::vector<double> v,
-                      std::vector<int> label,
-                      double threshold)
+                     std::vector<double> v,
+                     std::vector<int> label,
+                     double threshold)
 {
-    std::pair<int, double> min = minAverage(fspace, v, label);
-    double min_average = min.second;
-    int min_label = min.first;
+    double min_average = minAverage(fspace, v, label);
     if (min_average < threshold)
-        return min_label;
+        return false;
     else
-        return -1; // outlier
+        return true; // outlier
 }
 
 // TEST FUNCTIONS
@@ -123,21 +120,55 @@ void test_readCSV()
 void test_noveltyDetection()
 {
     FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
-    std::vector<int> label(500);
+    FEATURE_SPACE tspace = readCSV("csv/baseline_500_test.csv");
+
+    std::vector<int> flabel(500);
     for (int i = 1; i <= 500; i++)
-        label[i - 1] = i;
-    double accuray = 0;
+        flabel[i - 1] = i;
+
+    std::vector<int> tlabel(501);
+    for (int i = 1; i <= 501; i++)
+        tlabel[i - 1] = i;
+
     double ct = 0;
-    for(const int& l: label)
+    double TP, FP, TN, FN = 0;
+
+    for (const int &l : tlabel)
     {
-        for(const auto& u: fspace[l])
+        for (const auto &u : tspace[l])
         {
-            if (l == noveltyDetection(fspace, u, label, 0.4))
-                accuray++;
-            ct++;
+            if (l != 501)
+            {
+                if (true == noveltyDetection(fspace, u, flabel, 0.93278782))
+                {
+                    FP++;
+                }
+                else
+                {
+                    TN++;
+                }
+            }
+            else
+            {
+                if (true == noveltyDetection(fspace, u, flabel, 0.93278782))
+                {
+                    TP++;
+                }
+                else
+                {
+                    FN++;
+                }
+            }
         }
-        printf("Testing noveltyDetection accuray... %3.1f\%\r", 100 * (ct / 2500));
     }
+
+    std::cout << "TN: " << TN << std::endl;
+    std::cout << "FP: " << FP << std::endl;
+    std::cout << "TP: " << TP << std::endl;
+    std::cout << "FN: " << FN << std::endl;
+    std::cout << "TP + FN = " << TP + FN << std::endl;
     std::cout << std::endl;
-    std::cout << "noveltyDetection accuray\t" << 100 * (accuray / 2500) << '%' << std::endl;
+    std::cout << "noveltyDetection Precision\t" << TP / (TP + FP) * 100 << '%' << std::endl;
+    std::cout << "noveltyDetection Recall\t" << TP / (TP + FN) * 100 << '%' << std::endl;
+    std::cout << "noveltyDetection accuray\t" << 100 * ((TP + TN) / (TP + TN + FP + FN)) << '%' << std::endl;
 }
