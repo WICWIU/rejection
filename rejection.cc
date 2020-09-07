@@ -127,7 +127,8 @@ void test_noveltyDetection()
         tlabel[i - 1] = i;
 
     double ct = 0;
-    double TP, FP, TN, FN = 0;
+    double TP, FP, TN, FN;
+    TP = FP = TN = FN = 0;
 
     for (const int &l : tlabel)
     {
@@ -135,20 +136,20 @@ void test_noveltyDetection()
         {
             if (l != 501)
             {
-                if (true == noveltyDetection(fspace, u, flabel, 0.93278782))
+                if (noveltyDetection(fspace, u, flabel, 0.93278782))
                     FP++;
                 else
                     TN++;
             }
             else
             {
-                if (true == noveltyDetection(fspace, u, flabel, 0.93278782))
+                if (noveltyDetection(fspace, u, flabel, 0.93278782))
                     TP++;
                 else
                     FN++;
             }
             ct++;
-            printf("Testing noveltyDetection progress: %2.1f%%\r", 100 * (ct / 2500));
+            printf("Testing noveltyDetection progress: %2.1f%%\r", 100 * (ct / 3000));
         }
     }
 
