@@ -56,7 +56,7 @@ double vectorDistance(std::vector<double> v, std::vector<double> u)
 }
 
 double minAverage(FEATURE_SPACE fspace,
-                  std::vector<double> v,
+                  std::vector<double> target,
                   std::vector<int> label)
 {
     double min_average = std::numeric_limits<double>::infinity();
@@ -65,23 +65,20 @@ double minAverage(FEATURE_SPACE fspace,
     {
         double average = 0.;
         for (const auto &u : fspace[l])
-            average += vectorDistance(u, v);
-        }
+            average += vectorDistance(u, target);
         average /= fspace[l].size();
         if (min_average > average)
-        {
             min_average = average;
-        }
     }
     return min_average;
 }
 
 bool noveltyDetection(FEATURE_SPACE fspace,
-                     std::vector<double> v,
+                     std::vector<double> target,
                      std::vector<int> label,
                      double threshold)
 {
-    double min_average = minAverage(fspace, v, label);
+    double min_average = minAverage(fspace, target, label);
     if (min_average < threshold)
         return false;
     else
@@ -139,25 +136,19 @@ void test_noveltyDetection()
             if (l != 501)
             {
                 if (true == noveltyDetection(fspace, u, flabel, 0.93278782))
-                {
                     FP++;
-                }
                 else
-                {
                     TN++;
-                }
             }
             else
             {
                 if (true == noveltyDetection(fspace, u, flabel, 0.93278782))
-                {
                     TP++;
-                }
                 else
-                {
                     FN++;
-                }
             }
+            ct++;
+            printf("Testing noveltyDetection progress: %2.1f%%\r", 100 * (ct / 2500));
         }
     }
 
