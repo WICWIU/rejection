@@ -15,11 +15,12 @@
 
 #include "rejection.hpp"
 
-FEATURE_SPACE Rejection::readCSV(std::string filename)
+FEATURE_SPACE Rejection::readCSV(std::string filepath)
 {
-    std::ifstream csv_file(filename);
+    std::ifstream csv_file(filepath);
     if (!csv_file.is_open())
         throw std::runtime_error("Could not open file");
+
     FEATURE_SPACE result;
     std::string line, colname;
     double val;
@@ -45,10 +46,11 @@ FEATURE_SPACE Rejection::readCSV(std::string filename)
         }
     }
     csv_file.close();
+
     return result;
 }
 
-double Rejection::vectorDistance(std::vector<double> v, std::vector<double> u)
+double Rejection::distance(std::vector<double> v, std::vector<double> u)
 {
     assert(v.size() == u.size());
     double accm = 0.;
@@ -57,28 +59,25 @@ double Rejection::vectorDistance(std::vector<double> v, std::vector<double> u)
     return sqrt(accm);
 }
 
-double Rejection::minAverage(FEATURE_SPACE fspace,
-                    std::vector<double> target)
+double Rejection::minAverage(std::vector<double> target)
 {
     double min_average = std::numeric_limits<double>::infinity();
     int min_label;
-    for (const int &l : *this->flabel)
+    for (const int &label : *this->flabel)
     {
         double average = 0.;
-        for (const auto &u : fspace[l])
-            average += vectorDistance(u, target);
-        average /= fspace[l].size();
+        for (const auto &u : this->fspace[label])
+            average += distance(u, target);
+        average /= this->fspace[label].size();
         if (min_average > average)
             min_average = average;
     }
     return min_average;
 }
 
-bool Rejection::noveltyDetection(std::vector<double> target,
-                        double threshold)
+bool Rejection::noveltyDetection(std::vector<double> target, double threshold)
 {
-    double min_average = minAverage(this->fspace, target);
-    if (min_average < threshold)
+    if (minAverage(target) < threshold)
         return false;
     else
         return true; // outlier
@@ -89,51 +88,54 @@ int Rejection::knn(std::vector<double> target, int k)
     // first k'th minimum <label, distance>
     std::vector<std::pair<int, double>> min_distances;
 
-    for (const int &l : *this->flabel)
+    for (const int &label: *this->flabel)
     {
-        for (const auto &u : this->fspace[l])
+        for (const auto &feature: this->fspace[label])
         {
-            double distance = vectorDistance(u, target);
+            double target_distance = distance(feature, target);
             // fullfill first k'th <label, distance>
             if (min_distances.size() < k)
-                min_distances.push_back(std::make_pair(l, distance));
+                min_distances.push_back(std::make_pair(label, target_distance));
             else 
             {
                 double max = -std::numeric_limits<float>::infinity();
                 int max_index;
-                // get max value and index
-                for(int i= 0 ; i < min_distances.size(); i++)
+                // get max value and index from minimum <label, distance>
+                for(int i = 0 ; i < min_distances.size(); i++)
                 {
-                    if(max < std::get<1>(min_distances[i]))
+                    if(max < min_distances[i].second)
                     {
-                        max = std::get<1>(min_distances[i]);
+                        max = min_distances[i].second;
                         max_index = i;
                     }
                 }
                 // remove max value and push new minimum value
-                if (distance < max)
+                if (target_distance < max)
                 {
                     min_distances.erase(min_distances.begin() + max_index);
-                    min_distances.push_back(std::make_pair(l, distance));
+                    min_distances.push_back(std::make_pair(label, target_distance));
                 }
             }
         }
     }
 
     // count each label
-    std::map<int, int> classified_label;
-    for(const auto& m: min_distances)
-        classified_label[std::get<0>(m)]++;
+    std::map<int, int> classified_labels;
+    for(const auto& min_distance: min_distances)
+        classified_labels[min_distance.first]++;
 
     // save maximum counted label into result
     int result;
     unsigned currentMax = 0;
-    for(auto it = classified_label.cbegin(); it != classified_label.cend(); ++it) {
-        if (it->second > currentMax) {
-            result = it->first;
-            currentMax = it->second;
+    for(const auto &classified_label: classified_labels) 
+    {
+        if (classified_label.second > currentMax) 
+        {
+            result = classified_label.first;
+            currentMax = classified_label.second;
         }
     }
+
     return result;
 }
 
@@ -155,6 +157,13 @@ Rejection::Rejection(std::string ref_filepath,
     this->flabel = new std::vector<int>(ref_label);
     this->tlabel = new std::vector<int>(test_label);
 
+    this->tspace_size = 0;
+    this->fspace_size = 0;
+    for (int i = 0; i < tspace.size(); i++)
+        this->tspace_size += tspace[i].size();
+    for (int i = 0; i < fspace.size(); i++)
+        this->fspace_size += fspace[i].size();
+
     for (int i = 1; i <= ref_label; i++)
         (*this->flabel)[i - 1] = i;
     for (int i = 1; i <= test_label; i++)
@@ -166,27 +175,28 @@ void Rejection::showPrecisionRecall_noveltyDetection()
     double ct = 0;
     double TP, FP, TN, FN;
     TP = FP = TN = FN = 0;
+    int outlier_label = (*this->tlabel).back();
 
-    for (const int &l : (*this->tlabel))
+    for (const int &test_label: *this->tlabel)
     {
-        for (const auto &u : tspace[l])
+        for (const auto &test_feature: this->tspace[test_label])
         {
-            if (l != 501)
+            if (test_label != outlier_label)
             {
-                if (noveltyDetection(u, 0.93278782))
+                if (noveltyDetection(test_feature, this->threshold))
                     FP++;
                 else
                     TN++;
             }
-            else
+            else // outlier
             {
-                if (noveltyDetection(u, 0.93278782))
+                if (noveltyDetection(test_feature, this->threshold))
                     TP++;
                 else
                     FN++;
             }
-            ct++;
-            printf("Testing noveltyDetection progress: %2.1f%%\r", 100 * (ct / 3000));
+            printf("Testing noveltyDetection progress: %2.1f%%\r", 
+                   100 * (++ct / this->tspace_size));
         }
     }
 
@@ -202,23 +212,24 @@ void Rejection::showPrecisionRecall_noveltyDetection()
     std::cout << "noveltyDetection accuray\t" << 100 * ((TP + TN) / (TP + TN + FP + FN)) << '%' << std::endl;
 }
 
-void Rejection::showPrecisionRecall_KNN()
+void Rejection::showPrecisionRecall_KNN(int k)
 {
     double accuracy = 0;
     double ct = 0;
-    for (const int &l : *this->tlabel)
+    int outlier_label = (*this->tlabel).back();
+
+    for (const int &test_label: *this->tlabel)
     {
-        for (const auto &u : tspace[l])
+        for (const auto &test_feature: tspace[test_label])
         {
-            if (l != 501)
+            if (test_label != outlier_label)
             {
-                if (l == knn(u, 5))
+                if (test_label == knn(test_feature, k))
                     accuracy++;
-                ct++;
-                printf("Testing knn progress: %2.1f%%\r", 100 * (ct / 2500));
+                printf("Testing knn progress: %2.1f%%\r", 100 * (++ct / fspace_size));
             }
         }
     }
     std::cout << std::endl;
-    std::cout << "KNN accuracy: " << 100 * (accuracy / 2500) << "%" << std::endl;
+    std::cout << "KNN accuracy: " << 100 * (accuracy / fspace_size) << "%" << std::endl;
 }

@@ -7,7 +7,7 @@ int main()
         "csv/baseline_500_test.csv",
         0.93278782
     );
-    baseline_500.showPrecisionRecall_KNN();
+    baseline_500.showPrecisionRecall_KNN(5);
     baseline_500.showPrecisionRecall_noveltyDetection();
 
     return 0;
