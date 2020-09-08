@@ -1,6 +1,3 @@
-#include <cassert>
-#include <cmath>
-#include <cstdio>
 #include <limits>
 #include <numeric>
 #include <string>
@@ -12,9 +9,13 @@
 #include <stdexcept>
 #include <sstream>
 
-typedef std::map<int, std::vector<std::vector<double>>> FEATURE_SPACE;
+#include <cassert>
+#include <cmath>
+#include <cstdio>
 
-FEATURE_SPACE readCSV(std::string filename)
+#include "rejection.hpp"
+
+FEATURE_SPACE Rejection::readCSV(std::string filename)
 {
     std::ifstream csv_file(filename);
     if (!csv_file.is_open())
@@ -47,7 +48,7 @@ FEATURE_SPACE readCSV(std::string filename)
     return result;
 }
 
-double vectorDistance(std::vector<double> v, std::vector<double> u)
+double Rejection::vectorDistance(std::vector<double> v, std::vector<double> u)
 {
     assert(v.size() == u.size());
     double accm = 0.;
@@ -56,13 +57,12 @@ double vectorDistance(std::vector<double> v, std::vector<double> u)
     return sqrt(accm);
 }
 
-double minAverage(FEATURE_SPACE fspace,
-                  std::vector<double> target,
-                  std::vector<int> label)
+double Rejection::minAverage(FEATURE_SPACE fspace,
+                    std::vector<double> target)
 {
     double min_average = std::numeric_limits<double>::infinity();
     int min_label;
-    for (const int &l : label)
+    for (const int &l : *this->flabel)
     {
         double average = 0.;
         for (const auto &u : fspace[l])
@@ -74,29 +74,24 @@ double minAverage(FEATURE_SPACE fspace,
     return min_average;
 }
 
-bool noveltyDetection(FEATURE_SPACE fspace,
-                     std::vector<double> target,
-                     std::vector<int> label,
-                     double threshold)
+bool Rejection::noveltyDetection(std::vector<double> target,
+                        double threshold)
 {
-    double min_average = minAverage(fspace, target, label);
+    double min_average = minAverage(this->fspace, target);
     if (min_average < threshold)
         return false;
     else
         return true; // outlier
 }
 
-int knn(FEATURE_SPACE fspace,
-        std::vector<double> target,
-        std::vector<int> label,
-        int k = 5)
+int Rejection::knn(std::vector<double> target, int k)
 {
     // first k'th minimum <label, distance>
     std::vector<std::pair<int, double>> min_distances;
 
-    for (const int &l : label)
+    for (const int &l : *this->flabel)
     {
-        for (const auto &u : fspace[l])
+        for (const auto &u : this->fspace[l])
         {
             double distance = vectorDistance(u, target);
             // fullfill first k'th <label, distance>
@@ -142,99 +137,50 @@ int knn(FEATURE_SPACE fspace,
     return result;
 }
 
-// TEST FUNCTIONS
-void test_readCSV();
-void test_knn();
-void test_noveltyDetection();
-// END of TEST FUNCTIONS
-
-int main()
+Rejection::~Rejection()
 {
-    //test_readCSV();
-    // test_noveltyDetection();
-    test_knn();
-
-    return 0;
+    delete this->flabel;
+    delete this->tlabel;
 }
 
-void test_readCSV()
+Rejection::Rejection(std::string ref_filepath, 
+                     std::string test_filepath,
+                     double threshold) 
+: threshold(threshold)
 {
-    FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
-    // vector of label 1
-    std::cout << fspace[1].size() << std::endl;
-    // first element of vector of label 1
-    std::cout << fspace[1][0].size() << std::endl;
-    // first element of first element of vector of label 1
-    std::cout << fspace[1][0][0] << std::endl;
-    // second element of first element of vector of label 1
-    std::cout << fspace[1][0][1] << std::endl;
-    // third element of first element of vector of label 1
-    std::cout << fspace[1][0][2] << std::endl;
+    this->fspace = readCSV("csv/baseline_500_ref.csv");
+    this->tspace = readCSV("csv/baseline_500_test.csv");
+    int ref_label = fspace.size();
+    int test_label = tspace.size();
+    this->flabel = new std::vector<int>(ref_label);
+    this->tlabel = new std::vector<int>(test_label);
+
+    for (int i = 1; i <= ref_label; i++)
+        (*this->flabel)[i - 1] = i;
+    for (int i = 1; i <= test_label; i++)
+        (*this->tlabel)[i - 1] = i;
 }
 
-void test_knn()
+void Rejection::showPrecisionRecall_noveltyDetection()
 {
-    FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
-    FEATURE_SPACE tspace = readCSV("csv/baseline_500_test.csv");
-
-    std::vector<int> flabel(500);
-    for (int i = 1; i <= 500; i++)
-        flabel[i - 1] = i;
-
-    std::vector<int> tlabel(501);
-    for (int i = 1; i <= 501; i++)
-        tlabel[i - 1] = i;
-    
-    double accuracy = 0;
-    double ct = 0;
-    for (const int &l : tlabel)
-    {
-        for (const auto &u : tspace[l])
-        {
-            if (l != 501)
-            {
-                if (l == knn(fspace, u, flabel))
-                    accuracy++;
-                ct++;
-                printf("Testing knn progress: %2.1f%%\r", 100 * (ct / 2500));
-            }
-        }
-    }
-    std::cout << std::endl;
-    std::cout << "KNN accuracy: " << 100 * (accuracy / 2500) << "%" << std::endl;
-}
-
-void test_noveltyDetection()
-{
-    FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
-    FEATURE_SPACE tspace = readCSV("csv/baseline_500_test.csv");
-
-    std::vector<int> flabel(500);
-    for (int i = 1; i <= 500; i++)
-        flabel[i - 1] = i;
-
-    std::vector<int> tlabel(501);
-    for (int i = 1; i <= 501; i++)
-        tlabel[i - 1] = i;
-
     double ct = 0;
     double TP, FP, TN, FN;
     TP = FP = TN = FN = 0;
 
-    for (const int &l : tlabel)
+    for (const int &l : (*this->tlabel))
     {
         for (const auto &u : tspace[l])
         {
             if (l != 501)
             {
-                if (noveltyDetection(fspace, u, flabel, 0.93278782))
+                if (noveltyDetection(u, 0.93278782))
                     FP++;
                 else
                     TN++;
             }
             else
             {
-                if (noveltyDetection(fspace, u, flabel, 0.93278782))
+                if (noveltyDetection(u, 0.93278782))
                     TP++;
                 else
                     FN++;
@@ -254,4 +200,25 @@ void test_noveltyDetection()
     std::cout << "noveltyDetection Precision\t" << TP / (TP + FP) * 100 << '%' << std::endl;
     std::cout << "noveltyDetection Recall\t" << TP / (TP + FN) * 100 << '%' << std::endl;
     std::cout << "noveltyDetection accuray\t" << 100 * ((TP + TN) / (TP + TN + FP + FN)) << '%' << std::endl;
+}
+
+void Rejection::showPrecisionRecall_KNN()
+{
+    double accuracy = 0;
+    double ct = 0;
+    for (const int &l : *this->tlabel)
+    {
+        for (const auto &u : tspace[l])
+        {
+            if (l != 501)
+            {
+                if (l == knn(u, 5))
+                    accuracy++;
+                ct++;
+                printf("Testing knn progress: %2.1f%%\r", 100 * (ct / 2500));
+            }
+        }
+    }
+    std::cout << std::endl;
+    std::cout << "KNN accuracy: " << 100 * (accuracy / 2500) << "%" << std::endl;
 }
