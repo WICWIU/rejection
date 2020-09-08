@@ -8,6 +8,7 @@
 #include <iostream>
 #include <vector>
 #include <map>
+#include <algorithm>
 #include <stdexcept>
 #include <sstream>
 
@@ -85,15 +86,73 @@ bool noveltyDetection(FEATURE_SPACE fspace,
         return true; // outlier
 }
 
+int knn(FEATURE_SPACE fspace,
+        std::vector<double> target,
+        std::vector<int> label,
+        int k = 5)
+{
+    // first k'th minimum <label, distance>
+    std::vector<std::pair<int, double>> min_distances;
+
+    for (const int &l : label)
+    {
+        for (const auto &u : fspace[l])
+        {
+            double distance = vectorDistance(u, target);
+            // fullfill first k'th <label, distance>
+            if (min_distances.size() < k)
+                min_distances.push_back(std::make_pair(l, distance));
+            else 
+            {
+                double max = -std::numeric_limits<float>::infinity();
+                int max_index;
+                // get max value and index
+                for(int i= 0 ; i < min_distances.size(); i++)
+                {
+                    if(max < std::get<1>(min_distances[i]))
+                    {
+                        max = std::get<1>(min_distances[i]);
+                        max_index = i;
+                    }
+                }
+                // remove max value and push new minimum value
+                if (distance < max)
+                {
+                    min_distances.erase(min_distances.begin() + max_index);
+                    min_distances.push_back(std::make_pair(l, distance));
+                }
+            }
+        }
+    }
+
+    // count each label
+    std::map<int, int> classified_label;
+    for(const auto& m: min_distances)
+        classified_label[std::get<0>(m)]++;
+
+    // save maximum counted label into result
+    int result;
+    unsigned currentMax = 0;
+    for(auto it = classified_label.cbegin(); it != classified_label.cend(); ++it) {
+        if (it->second > currentMax) {
+            result = it->first;
+            currentMax = it->second;
+        }
+    }
+    return result;
+}
+
 // TEST FUNCTIONS
 void test_readCSV();
+void test_knn();
 void test_noveltyDetection();
 // END of TEST FUNCTIONS
 
 int main()
 {
     //test_readCSV();
-    test_noveltyDetection();
+    // test_noveltyDetection();
+    test_knn();
 
     return 0;
 }
@@ -111,6 +170,38 @@ void test_readCSV()
     std::cout << fspace[1][0][1] << std::endl;
     // third element of first element of vector of label 1
     std::cout << fspace[1][0][2] << std::endl;
+}
+
+void test_knn()
+{
+    FEATURE_SPACE fspace = readCSV("csv/baseline_500_ref.csv");
+    FEATURE_SPACE tspace = readCSV("csv/baseline_500_test.csv");
+
+    std::vector<int> flabel(500);
+    for (int i = 1; i <= 500; i++)
+        flabel[i - 1] = i;
+
+    std::vector<int> tlabel(501);
+    for (int i = 1; i <= 501; i++)
+        tlabel[i - 1] = i;
+    
+    double accuracy = 0;
+    double ct = 0;
+    for (const int &l : tlabel)
+    {
+        for (const auto &u : tspace[l])
+        {
+            if (l != 501)
+            {
+                if (l == knn(fspace, u, flabel))
+                    accuracy++;
+                ct++;
+                printf("Testing knn progress: %2.1f%%\r", 100 * (ct / 2500));
+            }
+        }
+    }
+    std::cout << std::endl;
+    std::cout << "KNN accuracy: " << 100 * (accuracy / 2500) << "%" << std::endl;
 }
 
 void test_noveltyDetection()
@@ -153,6 +244,7 @@ void test_noveltyDetection()
         }
     }
 
+    std::cout << std::endl;
     std::cout << "TN: " << TN << std::endl;
     std::cout << "FP: " << FP << std::endl;
     std::cout << "TP: " << TP << std::endl;
