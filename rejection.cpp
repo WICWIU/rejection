@@ -88,22 +88,22 @@ int Rejection::knn(std::vector<double> target, int k)
     // first k'th minimum <label, distance>
     std::vector<std::pair<int, double>> min_distances;
 
-    for (const int &label: *this->flabel)
+    for (const int &label : *this->flabel)
     {
-        for (const auto &feature: this->fspace[label])
+        for (const auto &feature : this->fspace[label])
         {
             double target_distance = distance(feature, target);
             // fullfill first k'th <label, distance>
             if (min_distances.size() < k)
                 min_distances.push_back(std::make_pair(label, target_distance));
-            else 
+            else
             {
                 double max = -std::numeric_limits<float>::infinity();
                 int max_index;
                 // get max value and index from minimum <label, distance>
-                for(int i = 0 ; i < min_distances.size(); i++)
+                for (int i = 0; i < min_distances.size(); i++)
                 {
-                    if(max < min_distances[i].second)
+                    if (max < min_distances[i].second)
                     {
                         max = min_distances[i].second;
                         max_index = i;
@@ -121,15 +121,15 @@ int Rejection::knn(std::vector<double> target, int k)
 
     // count each label
     std::map<int, int> classified_labels;
-    for(const auto& min_distance: min_distances)
+    for (const auto &min_distance : min_distances)
         classified_labels[min_distance.first]++;
 
     // save maximum counted label into result
     int result;
     unsigned currentMax = 0;
-    for(const auto &classified_label: classified_labels) 
+    for (const auto &classified_label : classified_labels)
     {
-        if (classified_label.second > currentMax) 
+        if (classified_label.second > currentMax)
         {
             result = classified_label.first;
             currentMax = classified_label.second;
@@ -145,10 +145,10 @@ Rejection::~Rejection()
     delete this->tlabel;
 }
 
-Rejection::Rejection(std::string ref_filepath, 
+Rejection::Rejection(std::string ref_filepath,
                      std::string test_filepath,
-                     double threshold) 
-: threshold(threshold)
+                     double threshold)
+    : threshold(threshold)
 {
     this->fspace = readCSV("csv/baseline_500_ref.csv");
     this->tspace = readCSV("csv/baseline_500_test.csv");
@@ -176,13 +176,16 @@ void Rejection::showPrecisionRecall_noveltyDetection()
     double TP, FP, TN, FN;
     TP = FP = TN = FN = 0;
     int outlier_label = (*this->tlabel).back();
+    double accuracy = 0;
 
-    for (const int &test_label: *this->tlabel)
+    for (const int &test_label : *this->tlabel)
     {
-        for (const auto &test_feature: this->tspace[test_label])
+        for (const auto &test_feature : this->tspace[test_label])
         {
             if (test_label != outlier_label)
             {
+                if (test_label == knn(test_feature, 5))
+                    accuracy++;
                 if (noveltyDetection(test_feature, this->threshold))
                     FP++;
                 else
@@ -195,41 +198,42 @@ void Rejection::showPrecisionRecall_noveltyDetection()
                 else
                     FN++;
             }
-            printf("Testing noveltyDetection progress: %2.1f%%\r", 
+            printf("Testing noveltyDetection progress: %2.1f%%\r",
                    100 * (++ct / this->tspace_size));
         }
     }
 
     std::cout << std::endl;
-    std::cout << "TN: " << TN << std::endl;
-    std::cout << "FP: " << FP << std::endl;
-    std::cout << "TP: " << TP << std::endl;
-    std::cout << "FN: " << FN << std::endl;
-    std::cout << "TP + FN = " << TP + FN << std::endl;
+    // std::cout << "TN: " << TN << std::endl;
+    // std::cout << "FP: " << FP << std::endl;
+    // std::cout << "TP: " << TP << std::endl;
+    // std::cout << "FN: " << FN << std::endl;
+    // std::cout << "TP + FN + TN + FP = " << TP + TN + FP + FN << std::endl;
     std::cout << std::endl;
     std::cout << "noveltyDetection Precision\t" << TP / (TP + FP) * 100 << '%' << std::endl;
     std::cout << "noveltyDetection Recall\t" << TP / (TP + FN) * 100 << '%' << std::endl;
-    std::cout << "noveltyDetection accuray\t" << 100 * ((TP + TN) / (TP + TN + FP + FN)) << '%' << std::endl;
+    std::cout << "noveltyDetection accuray\t" << 100 * ((TP + accuracy) / (TP + TN + FP + FN)) << '%' << std::endl;
 }
 
-void Rejection::showPrecisionRecall_KNN(int k)
+void Rejection::showAccuracy_KNN(int k)
 {
     double accuracy = 0;
     double ct = 0;
     int outlier_label = (*this->tlabel).back();
 
-    for (const int &test_label: *this->tlabel)
+    for (const int &test_label : *this->tlabel)
     {
-        for (const auto &test_feature: tspace[test_label])
+        for (const auto &test_feature : tspace[test_label])
         {
             if (test_label != outlier_label)
             {
                 if (test_label == knn(test_feature, k))
                     accuracy++;
-                printf("Testing knn progress: %2.1f%%\r", 100 * (++ct / fspace_size));
+                printf("Testing knn progress: %2.1f%%\r", 100 * (++ct / tspace_size));
             }
         }
     }
     std::cout << std::endl;
-    std::cout << "KNN accuracy: " << 100 * (accuracy / fspace_size) << "%" << std::endl;
+    std::cout << tspace_size << std::endl;
+    std::cout << "KNN accuracy: " << 100 * (accuracy / tspace_size) << "%" << std::endl;
 }

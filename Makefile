@@ -1,5 +1,5 @@
 all:
-	g++ main.cpp rejection.cpp -o main
+	g++ main.cpp rejection.cpp -std=c++14 -o main
 
 clean:
 	rm main

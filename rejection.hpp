@@ -12,8 +12,8 @@ class Rejection
     int test_label;
     size_t fspace_size;
     size_t tspace_size;
-    std::vector<int> * flabel;
-    std::vector<int> * tlabel;
+    std::vector<int> *flabel;
+    std::vector<int> *tlabel;
     double threshold;
 
     FEATURE_SPACE readCSV(std::string filename);
@@ -21,11 +21,12 @@ class Rejection
     double minAverage(std::vector<double> targe);
     bool noveltyDetection(std::vector<double> target, double threshold);
     int knn(std::vector<double> target, int k);
+
 public:
     ~Rejection();
-    Rejection(std::string ref_filepath, 
+    Rejection(std::string ref_filepath,
               std::string test_filepath,
               double threshold);
     void showPrecisionRecall_noveltyDetection();
-    void showPrecisionRecall_KNN(int k);
+    void showAccuracy_KNN(int k);
 };
