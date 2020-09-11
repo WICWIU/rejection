@@ -184,8 +184,6 @@ void Rejection::showPrecisionRecall_noveltyDetection()
         {
             if (test_label != outlier_label)
             {
-                if (test_label == knn(test_feature, 5))
-                    accuracy++;
                 if (noveltyDetection(test_feature, this->threshold))
                     FP++;
                 else
@@ -212,12 +210,13 @@ void Rejection::showPrecisionRecall_noveltyDetection()
     std::cout << std::endl;
     std::cout << "noveltyDetection Precision\t" << TP / (TP + FP) * 100 << '%' << std::endl;
     std::cout << "noveltyDetection Recall\t" << TP / (TP + FN) * 100 << '%' << std::endl;
-    std::cout << "noveltyDetection accuray\t" << 100 * ((TP + accuracy) / (TP + TN + FP + FN)) << '%' << std::endl;
+    std::cout << "noveltyDetection accuray\t" << 100 * ((TP + TN) / (TP + TN + FP + FN)) << '%' << std::endl;
 }
 
 void Rejection::showAccuracy_KNN(int k)
 {
     double accuracy = 0;
+    double rej_accuracy = 0;
     double ct = 0;
     int outlier_label = (*this->tlabel).back();
 
@@ -225,15 +224,20 @@ void Rejection::showAccuracy_KNN(int k)
     {
         for (const auto &test_feature : tspace[test_label])
         {
+
             if (test_label != outlier_label)
             {
+                if (!noveltyDetection(test_feature, this->threshold) && (test_label == knn(test_feature, k)))
+                    rej_accuracy++;
+
                 if (test_label == knn(test_feature, k))
                     accuracy++;
-                printf("Testing knn progress: %2.1f%%\r", 100 * (++ct / tspace_size));
+                printf("Testing knn progress: %2.1f%%\r", 100 * (++ct / fspace_size));
             }
         }
     }
     std::cout << std::endl;
-    std::cout << tspace_size << std::endl;
-    std::cout << "KNN accuracy: " << 100 * (accuracy / tspace_size) << "%" << std::endl;
+    std::cout << fspace_size << std::endl;
+    std::cout << "KNN accuracy without rejection function: " << 100 * (accuracy / fspace_size) << "%" << std::endl;
+    std::cout << "KNN accuracy with rejection function: " << 100 * (rej_accuracy / fspace_size) << "%" << std::endl;
 }
