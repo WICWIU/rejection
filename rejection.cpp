@@ -170,6 +170,34 @@ Rejection::Rejection(std::string ref_filepath,
         (*this->tlabel)[i - 1] = i;
 }
 
+Rejection::Rejection(double threshold)
+    : threshold(threshold)
+{
+}
+
+void Rejection::SetTestInfo(FEATURE_SPACE test_space)
+{
+    this->tspace = test_space;
+    int test_label = tspace.size();
+    this->tlabel = new std::vector<int>(test_label);
+    this->tspace_size = 0;
+    for (int i = 0; i < tspace.size(); i++)
+        this->tspace_size += tspace[i].size();
+    for (int i = 1; i <= test_label; i++)
+        (*this->tlabel)[i - 1] = i;
+}
+void Rejection::SetRefInfo(FEATURE_SPACE ref_space)
+{
+    this->fspace = ref_space;
+    int ref_label = fspace.size();
+    this->flabel = new std::vector<int>(ref_label);
+    this->fspace_size = 0;
+    for (int i = 0; i < fspace.size(); i++)
+        this->fspace_size += fspace[i].size();
+    for (int i = 1; i <= ref_label; i++)
+        (*this->flabel)[i - 1] = i;
+}
+
 void Rejection::showPrecisionRecall_noveltyDetection()
 {
     double ct = 0;
